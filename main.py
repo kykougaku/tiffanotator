@@ -354,6 +354,7 @@ class MainWindow(tk.Frame):
     @check_map_loaded
     def download(self) -> None:
         data = []
+        save_path = os.path.dirname(self.treeview.item(0)['values'][0])
         for i in self.treeview.get_children():
             row_data = self.treeview.item(i)['values']
             row_data[0] = os.path.basename(row_data[0])
@@ -361,7 +362,7 @@ class MainWindow(tk.Frame):
             row_data[2] = float(row_data[2])
             data.append(row_data)
         df = pd.DataFrame(data, columns=['filename', 'Si', 'SWCNT'])
-        df.to_csv(os.path.join(os.path.dirname(data[0][0]), 'data.csv'), index=False, header=True)
+        df.to_csv(os.path.join(save_path, 'data.csv'), index=False, header=True)
 
     @update_spec_plot
     def select_data(self, event) -> None:
