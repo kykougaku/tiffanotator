@@ -357,12 +357,11 @@ class MainWindow(tk.Frame):
 
     @check_map_loaded
     def download(self) -> None:
-        if self.treeview.focus() == '':
-            return
         data = []
         for i in self.treeview.get_children():
             data.append(self.treeview.item(i)['values'])
-        df = pd.DataFrame(data)
+        df = pd.DataFrame(data, columns=['filename', 'Si', 'SWCNT'])
+        df.to_csv(os.path.join(os.path.dirname(data[0][0]), 'data.csv'), index=False, header=True)
 
     @update_spec_plot
     def select_data(self, event) -> None:
@@ -419,7 +418,7 @@ class MainWindow(tk.Frame):
                 tk.END,
                 iid=str(i),
                 text=str(os.path.basename(filename).split(".")[0]),
-                values=[filename],
+                values=[filename, 0, 0],
                 open=True,
                 )
             self.button_download.config(state=tk.NORMAL)
