@@ -355,7 +355,11 @@ class MainWindow(tk.Frame):
     def download(self) -> None:
         data = []
         for i in self.treeview.get_children():
-            data.append(self.treeview.item(i)['values'])
+            row_data = self.treeview.item(i)['values']
+            row_data[0] = os.path.basename(row_data[0])
+            row_data[1] = float(row_data[1])
+            row_data[2] = float(row_data[2])
+            data.append(row_data)
         df = pd.DataFrame(data, columns=['filename', 'Si', 'SWCNT'])
         df.to_csv(os.path.join(os.path.dirname(data[0][0]), 'data.csv'), index=False, header=True)
 
