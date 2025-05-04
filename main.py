@@ -1,3 +1,4 @@
+import re
 import tkinter as tk
 from tkinter import ttk
 import os
@@ -109,12 +110,14 @@ class SpeDataLoader_wrpper:
         self.spec_dict = {}
 
     def load_files(self, filenames:list) -> None:
-        meta_keys = ['EXPOSURE_TIME']
+        filenames = sorted(filenames, key=lambda x: int(re.search(r'\d+', os.path.basename(x)).group()))
         for filename in filenames:
+            if filename in self.spec_dict:
+                continue
+
             if filename.endswith('.tif') or filename.endswith('.tiff'):
                 image_data= cv2.imread(filename, cv2.IMREAD_UNCHANGED)
                 self.spec_dict[filename] = image_data.astype(np.float32)
-
 
     def delete_file(self, filename):
         if filename in self.spec_dict:
@@ -175,7 +178,7 @@ class MainWindow(tk.Frame):
         frame_map.grid(row=1, column=1)
 
         # frame_listbox
-        self.treeview = EditableTable(frame_download, height=6, selectmode=tk.EXTENDED)
+        self.treeview = EditableTable(frame_download, height=20, selectmode=tk.EXTENDED)
         self.treeview_scrollbar = ttk.Scrollbar(frame_download, orient=tk.VERTICAL, command=self.treeview.yview)
         self.treeview['yscrollcommand'] = self.treeview_scrollbar.set
         self.treeview['columns'] = ['filename', "Si", "SWCNT"]
@@ -192,8 +195,10 @@ class MainWindow(tk.Frame):
         self.treeview.bind('<Button-3>', self.delete_data)
 
         self.button_download = ttk.Button(frame_download, text='DOWNLOAD', command=self.download, state=tk.DISABLED)
-        self.treeview.pack()
-        self.button_download.pack()
+
+        self.treeview.grid(row=0, column=0, sticky=tk.NSEW)
+        self.treeview_scrollbar.grid(row=0, column=1, sticky=tk.NS)
+        self.button_download.grid(row=1, column=0, columnspan=2, sticky=tk.EW)
 
         # frame_map
 
@@ -249,6 +254,7 @@ class MainWindow(tk.Frame):
         self.entry_height_range_1.grid(row=5, column=1)
         self.entry_height_range_2.grid(row=5, column=2)
         # canvas_drop
+        checkbox_median_filter.grid(row=6, column=0)
         self.canvas_drop = tk.Canvas(self.master, width=self.width_canvas, height=self.height_canvas)
         self.canvas_drop.create_rectangle(0, 0, self.width_canvas, self.height_canvas, fill='lightgray')
         self.canvas_drop.create_text(self.width_canvas / 2, self.height_canvas * 1 / 2, text='Data Drop Here',
@@ -339,21 +345,11 @@ class MainWindow(tk.Frame):
     @check_map_loaded
     def on_change_cmap_settings(self, *args) -> None:
         if self.map_autoscale.get():
-            self.cmap_range_1.set(np.min(self.ple_df.values))
-            self.cmap_range_2.set(np.max(self.ple_df.values))
             self.entry_cmap_range_1.config(state=tk.DISABLED)
             self.entry_cmap_range_2.config(state=tk.DISABLED)
         else:
             self.entry_cmap_range_1.config(state=tk.NORMAL)
             self.entry_cmap_range_2.config(state=tk.NORMAL)
-        cmap_range = self.update_plemap(
-            cmap=self.map_color.get(),
-            cmap_range=(self.cmap_range_1.get(), self.cmap_range_2.get()),
-            cmap_range_auto=self.map_autoscale.get())
-        # カラーマップの範囲を更新
-        self.cmap_range_1.set(round(cmap_range[0]))
-        self.cmap_range_2.set(round(cmap_range[1]))
-        self.canvas.draw()
 
     @check_map_loaded
     def download(self) -> None:
@@ -407,7 +403,14 @@ class MainWindow(tk.Frame):
         imagedata = imagedata[int(self.height_range_1.get()):int(self.height_range_2.get()),
                                 int(self.width_range_1.get()):int(self.width_range_2.get())]
 
-        self.ax.imshow(imagedata, cmap=self.map_color.get(), aspect='auto')
+        if self.map_autoscale.get():
+            self.ax.imshow(imagedata, cmap=self.map_color.get(), aspect='equal')
+            self.cmap_range_1.set(np.min(imagedata))
+            self.cmap_range_2.set(np.max(imagedata))
+        else:
+            self.ax.imshow(imagedata, cmap=self.map_color.get(), aspect='equal',
+                           vmin=self.cmap_range_1.get(), vmax=self.cmap_range_2.get())
+
 
 
     def update_treeview(self) -> None:
